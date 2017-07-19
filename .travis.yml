@@ -28,6 +28,6 @@ git:
 #  - julia -e 'Pkg.clone(pwd()); Pkg.build("StochasticCubicDescent"); Pkg.test("StochasticCubicDescent"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("StochasticCubicDescent")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  #- julia -e 'cd(Pkg.dir("StochasticCubicDescent")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
   - julia -e 'cd(Pkg.dir("StochasticCubicDescent")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
