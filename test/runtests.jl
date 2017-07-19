@@ -42,3 +42,27 @@ using Base.Test
     iterate_increases = iterate_norms[2:end] - iterate_norms[1:end-1]
     @test all(iterate_increases .> 0)
 end
+
+
+@testset "Stochastic Cubic Descent" begin
+    val(x, ξ) = 0.1x[1]^2 + exp(x[1] + 1) + x[1] * ξ[1]
+    grad!(x, ξ, grad) = begin
+        grad[1] = 0.2x[1] + exp(x[1] + 1) + ξ[1]
+    end
+    hv!(x, ξ, v, hv) = begin
+        @assert x[1] < 5
+        hv[1] = (0.2 + exp(x[1] + 1)) * v[1]
+    end
+    # very low noise
+    ξ!(x, ξ) = ξ[:] = (rand(1) - 0.5) * 1e-4
+    # exp(5) isn't a global Lipschitz constant, but it should hold
+    # at every point that the algorithm visits
+    f = ObjectiveFunction(val, grad!, hv!, ξ!, exp(5))
+
+    solver = SCD(100)
+    state = SCDState([-3.])
+
+    optimize!(solver, state, f)
+
+    @test norm(state.grad) ≈ 0.0 atol=1e-2
+end

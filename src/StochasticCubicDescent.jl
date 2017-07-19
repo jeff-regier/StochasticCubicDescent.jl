@@ -54,13 +54,14 @@ end
 # Stochastic Cubic Descent (SCD)
 
 struct SCDState <: State
-    iter::Int
+    iter::Ref{Int}
     x::Vector
     grad::Vector
     hv::Vector
     ξ::Vector
 
-    SCDState(x0) = new(0, x0, similar(x0), similar(x0))
+    # TODO: allow ξ to have a different dimension than x
+    SCDState(x0) = new(0, x0, similar(x0), similar(x0), similar(x0))
 end
 
 struct SCD <: Solver
@@ -74,32 +75,35 @@ function SCD(max_iters)
 end
 
 function optimize!(solver::SCD, state::SCDState, f::ObjectiveFunction)
-    β = f.ρ  # Here f.ρ is an upper bound on the β from Carmon-Duchi 2017
-    R = β / (2f.ρ) + sqrt((β / 2f.ρ)^2 + norm(b) / f.ρ)
-    η = (4(β + f.ρ * R))^(-1)
-    gd_solver = GradientDescent(η, 1000)
-
-    Rc_lower_bound = -β / f.ρ + R
-    gd_x0 = -Rc_lower_bound / norm(b) * b
-    gd_state = GDState(gd_x0)
-
-    val(x) = begin
-        f.hv!(state.x + x, x, state.hv; ξ=state.ξ)
-        0.5(x' * state.hv) + x' * state.grad + (f.ρ / 3) * norm(x)^3
-    end
-    grad!(x, grad) = begin
-        f.hv!(state.x + x, x, state.hv; ξ=state.ξ)
-        grad[:] = state.hv + state.grad + f.ρ * norm(x) * x
-    end
-    gd_subproblem = ObjectiveFunction(val, grad!)
-
     while state.iter[] < solver.max_iters
-        f.grad!(state.x, state.grad)  # stochastic
         f.ξ!(state.x, state.ξ)
+        f.grad!(state.x, state.ξ, state.grad)
         solver.store_history && push!(solver.history, deepcopy(state))
-        state.iter[] += 1
+
+        β = f.ρ  # Here f.ρ is an upper bound on the β from Carmon-Duchi 2017
+        R = β / (2f.ρ) + sqrt((β / 2f.ρ)^2 + norm(state.grad) / f.ρ)
+        η = (4(β + f.ρ * R))^(-1)
+        gd_solver = GradientDescent(η, 1000)
+
+        Rc_lower_bound = -β / f.ρ + R
+        gd_x0 = -Rc_lower_bound / norm(state.grad) * state.grad
+        gd_state = GDState(gd_x0)
+
+        val(x) = begin
+            f.hv!(state.x + x, state.ξ, x, state.hv)
+            0.5(x' * state.hv) + x' * state.grad + (f.ρ / 3) * norm(x)^3
+        end
+        grad!(x, grad) = begin
+            f.hv!(state.x + x, state.ξ, x, state.hv)
+            grad[:] = state.hv + state.grad + f.ρ * norm(x) * x
+        end
+        gd_subproblem = ObjectiveFunction(val, grad!)
+
+        f.ξ!(state.x, state.ξ)
         optimize!(gd_solver, gd_state, gd_subproblem)
         state.x .+= gd_state.x
+
+        state.iter[] += 1
     end
 end
 
