@@ -107,7 +107,7 @@ The StochasticCubicDescent.jl package is licensed under the Apache License, Vers
 >           excluding those notices that do not pertain to any part of
 >           the Derivative Works; and
 > 
->       (d) If the Work includes a "NOTICE" text file as part of its
+>       (f) If the Work includes a "NOTICE" text file as part of its
 >           distribution, then any Derivative Works that You distribute must
 >           include a readable copy of the attribution notices contained
 >           within such NOTICE file, excluding those notices that do not
